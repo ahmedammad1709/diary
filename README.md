@@ -44,3 +44,21 @@ A React + Gemini web app that behaves like a cursed magical diary instead of a n
 ## Current MVP
 
 The first version includes the closed diary opening, parchment spread, typing, drawing, ink-sinking ritual, local memory, Gemini endpoint, structured mood/effect responses, and animated diary replies.
+
+## Vercel Deployment
+
+This project supports Vercel:
+
+- Frontend: Vite builds to `dist`.
+- Production API: Vercel Functions live in `api/`.
+- Local API: Express still runs from `server/server.js`.
+- Shared Gemini logic: `server/diaryCore.js`.
+
+Set these Vercel Environment Variables before deploying:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-3.5-flash
+```
+
+`vercel.json` includes `geminipersonality.md` in the serverless function bundle so the deployed diary keeps the same personality as local development.
