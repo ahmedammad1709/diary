@@ -1255,6 +1255,14 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
+  .left-page {
+    order: 2;
+  }
+
+  .right-page {
+    order: 1;
+  }
+
   .left-page,
   .right-page {
     border-radius: 0.7rem;
