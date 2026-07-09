@@ -233,6 +233,13 @@ button:disabled {
   transform: translateY(-1px);
 }
 
+.memory-reset:disabled,
+.clear-button:disabled,
+.mode-switch button:disabled {
+  opacity: 0.56;
+  transform: none;
+}
+
 .diary-book {
   position: relative;
   display: grid;
@@ -243,6 +250,8 @@ button:disabled {
   width: min(1220px, 100%);
   border-radius: 1rem;
   filter: drop-shadow(0 2.5rem 3.8rem rgba(0, 0, 0, 0.56));
+  perspective: 1500px;
+  transform-style: preserve-3d;
 }
 
 .diary-book::before {
@@ -257,6 +266,273 @@ button:disabled {
     inset 0 0 0 1px rgba(227, 171, 91, 0.22),
     inset 0 0 2.5rem rgba(0, 0, 0, 0.76);
   content: '';
+}
+
+.diary-book.reset-casting {
+  animation: resetBookPulse 1.1s ease both;
+}
+
+.diary-book.reset-sprinkling .left-page,
+.diary-book.reset-sprinkling .right-page {
+  animation: pageCleanse 0.95s ease both;
+}
+
+.diary-book.reset-sealing .left-page {
+  animation: leftPageSeal 0.82s cubic-bezier(0.26, 0.74, 0.24, 1) both;
+}
+
+.diary-book.reset-sealing .right-page {
+  animation: rightPageSeal 0.82s cubic-bezier(0.26, 0.74, 0.24, 1) both;
+}
+
+.diary-book.reset-reopening .left-page {
+  animation: leftPageReopen 0.95s cubic-bezier(0.18, 0.74, 0.18, 1) both;
+}
+
+.diary-book.reset-reopening .right-page {
+  animation: rightPageReopen 0.95s cubic-bezier(0.18, 0.74, 0.18, 1) both;
+}
+
+.reset-ritual {
+  position: absolute;
+  inset: -0.8rem -0.7rem;
+  z-index: 5;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  pointer-events: none;
+}
+
+.spell-wand {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 4;
+  width: clamp(8.8rem, 17vw, 13.6rem);
+  aspect-ratio: 471 / 530;
+  opacity: 0;
+  transform: translate3d(-50%, 92%, 0) scale(0.82);
+  transform-origin: 50% 92%;
+  animation: wandRise 3.02s cubic-bezier(0.17, 0.82, 0.2, 1) both;
+  filter:
+    drop-shadow(0 1.1rem 1.2rem rgba(16, 5, 2, 0.45))
+    drop-shadow(0 0 0.75rem rgba(255, 221, 145, 0.22));
+}
+
+.wand-body {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 91%;
+  animation: wandTipCircle 2.14s 0.86s cubic-bezier(0.3, 0.05, 0.16, 1) both;
+}
+
+.wand-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
+.wand-trail {
+  position: absolute;
+  top: 4%;
+  left: 50%;
+  width: 9.2rem;
+  height: 9.2rem;
+  border-radius: 50%;
+  background:
+    conic-gradient(from 28deg, transparent 0 16%, rgba(255, 239, 174, 0.72) 28%, transparent 46% 100%),
+    radial-gradient(circle, rgba(255, 239, 174, 0.28), transparent 63%);
+  filter: blur(1.2px);
+  opacity: 0;
+  transform: translate(-50%, -42%) rotate(0deg);
+  animation: wandTrail 1.72s 1.02s ease-out both;
+}
+
+.wand-tip-glow,
+.wand-tip-ring {
+  position: absolute;
+  top: 4.4%;
+  left: 50%;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.wand-tip-glow {
+  width: 3.2rem;
+  height: 3.2rem;
+  background: radial-gradient(circle, #fff8d4 0 11%, rgba(255, 228, 139, 0.72) 21%, rgba(255, 204, 91, 0.2) 48%, transparent 70%);
+  box-shadow:
+    0 0 0.7rem rgba(255, 248, 207, 0.9),
+    0 0 2.2rem rgba(255, 209, 101, 0.78),
+    0 0 4.6rem rgba(255, 182, 60, 0.42);
+  opacity: 0;
+  animation: tipGlow 2.12s 0.84s ease-out both;
+}
+
+.wand-tip-ring {
+  width: 6.6rem;
+  height: 6.6rem;
+  border: 1px solid rgba(255, 232, 157, 0.42);
+  box-shadow:
+    inset 0 0 1.3rem rgba(255, 233, 164, 0.24),
+    0 0 2.6rem rgba(255, 200, 88, 0.2);
+  opacity: 0;
+  animation: tipRing 1.45s 1.18s ease-out both;
+}
+
+.spell-circle {
+  position: absolute;
+  top: 47%;
+  left: 50%;
+  z-index: 2;
+  width: clamp(13rem, 26vw, 22rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.45);
+  animation: spellCircleReveal 2.05s 1.02s ease-out both;
+}
+
+.spell-circle::before,
+.spell-circle::after,
+.spell-circle span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  content: '';
+}
+
+.spell-circle::before {
+  border: 1px solid rgba(255, 233, 166, 0.5);
+  box-shadow:
+    inset 0 0 1.2rem rgba(255, 237, 174, 0.18),
+    0 0 2.6rem rgba(255, 208, 104, 0.18);
+}
+
+.spell-circle::after {
+  background:
+    conic-gradient(from 0deg, transparent, rgba(255, 236, 169, 0.72), transparent 24%, transparent 46%, rgba(255, 215, 119, 0.6), transparent 68%, transparent);
+  filter: blur(0.8px);
+  mask: radial-gradient(circle, transparent 58%, #000 59% 63%, transparent 64%);
+  animation: circleSpin 2.1s linear infinite;
+}
+
+.spell-circle span:first-child {
+  inset: 18%;
+  border: 1px dashed rgba(255, 241, 186, 0.42);
+  animation: circleSpin 2.7s linear reverse infinite;
+}
+
+.spell-circle span:last-child {
+  inset: 37%;
+  background: radial-gradient(circle, rgba(255, 242, 184, 0.24), transparent 66%);
+}
+
+.clean-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    radial-gradient(circle at 52% 48%, rgba(255, 248, 202, 0.56), transparent 19rem),
+    linear-gradient(105deg, transparent 10%, rgba(255, 230, 161, 0.44), transparent 66%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: resetFlash 2.2s 0.48s ease both;
+}
+
+.spark-field {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+.spark-field::before,
+.spark-field::after {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  content: '';
+  pointer-events: none;
+}
+
+.spark-field::before {
+  background:
+    radial-gradient(circle at 12% 20%, rgba(255, 241, 184, 0.72) 0 1px, transparent 2px),
+    radial-gradient(circle at 21% 72%, rgba(255, 241, 184, 0.68) 0 1px, transparent 2px),
+    radial-gradient(circle at 34% 36%, rgba(255, 241, 184, 0.84) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 49% 81%, rgba(255, 241, 184, 0.6) 0 1px, transparent 2px),
+    radial-gradient(circle at 62% 18%, rgba(255, 241, 184, 0.76) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 78% 49%, rgba(255, 241, 184, 0.7) 0 1px, transparent 2px),
+    radial-gradient(circle at 91% 74%, rgba(255, 241, 184, 0.82) 0 1.5px, transparent 2.5px);
+  filter: drop-shadow(0 0 0.45rem rgba(255, 220, 126, 0.66));
+  animation: dustVeil 2.5s 1.15s ease-out both;
+}
+
+.spark-field::after {
+  background:
+    linear-gradient(115deg, transparent 0 28%, rgba(255, 235, 163, 0.18), transparent 58%),
+    radial-gradient(circle at 50% 47%, rgba(255, 244, 195, 0.24), transparent 22rem);
+  mix-blend-mode: screen;
+  animation: dustWash 2.2s 1.25s ease-out both;
+}
+
+.sparkle {
+  position: absolute;
+  top: var(--y);
+  left: var(--x);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.2);
+  animation: sparkleBurst 1.65s var(--delay) cubic-bezier(0.14, 0.86, 0.28, 1) both;
+}
+
+.sparkle::before,
+.sparkle::after {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 100%;
+  height: 18%;
+  border-radius: 999px;
+  background: rgba(255, 242, 186, 0.95);
+  box-shadow: 0 0 0.8rem rgba(255, 219, 131, 0.72);
+  content: '';
+  transform: translate(-50%, -50%);
+}
+
+.sparkle::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.sparkle-diamond {
+  border-radius: 0.12rem;
+}
+
+.sparkle-diamond::before,
+.sparkle-diamond::after {
+  height: 24%;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.sparkle-diamond::after {
+  transform: translate(-50%, -50%) rotate(135deg);
+}
+
+.sparkle-dot::before {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff8d1 0 18%, rgba(255, 217, 113, 0.88) 42%, transparent 68%);
+  transform: none;
+}
+
+.sparkle-dot::after {
+  display: none;
 }
 
 .left-page,
@@ -287,6 +563,7 @@ button:disabled {
 .left-page {
   border-radius: 0.7rem 0.2rem 0.2rem 0.7rem;
   padding: clamp(1.1rem, 2vw, 1.8rem);
+  transform-origin: right center;
 }
 
 .right-page {
@@ -294,6 +571,7 @@ button:disabled {
   grid-template-rows: auto minmax(220px, 1fr) minmax(120px, auto) auto;
   border-radius: 0.2rem 0.7rem 0.7rem 0.2rem;
   padding: clamp(1rem, 2vw, 1.6rem);
+  transform-origin: left center;
 }
 
 .right-page::after {
@@ -650,6 +928,254 @@ button:disabled {
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes resetBookPulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 2.5rem 3.8rem rgba(0, 0, 0, 0.56));
+  }
+  50% {
+    filter:
+      drop-shadow(0 2.5rem 3.8rem rgba(0, 0, 0, 0.56))
+      drop-shadow(0 0 1.8rem rgba(239, 193, 111, 0.34));
+  }
+}
+
+@keyframes wandRise {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, 95%, 0) scale(0.74) rotate(4deg);
+  }
+  18% {
+    opacity: 1;
+    transform: translate3d(-50%, 18%, 0) scale(0.9) rotate(-2deg);
+  }
+  37%,
+  72% {
+    opacity: 1;
+    transform: translate3d(-50%, -50%, 0) scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-50%, -78%, 0) scale(0.92) rotate(-5deg);
+  }
+}
+
+@keyframes wandTipCircle {
+  0% {
+    transform: rotate(-8deg) translate3d(0, 0, 0);
+  }
+  20% {
+    transform: rotate(13deg) translate3d(0.35rem, -0.4rem, 0);
+  }
+  40% {
+    transform: rotate(-15deg) translate3d(-0.55rem, -0.8rem, 0);
+  }
+  60% {
+    transform: rotate(17deg) translate3d(0.48rem, -0.2rem, 0);
+  }
+  80% {
+    transform: rotate(-11deg) translate3d(-0.2rem, 0.12rem, 0);
+  }
+  100% {
+    transform: rotate(3deg) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes wandTrail {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -42%) scale(0.45) rotate(-45deg);
+  }
+  24%,
+  72% {
+    opacity: 0.78;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -42%) scale(1.15) rotate(255deg);
+  }
+}
+
+@keyframes tipGlow {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.35);
+  }
+  18%,
+  76% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.65);
+  }
+}
+
+@keyframes tipRing {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2);
+  }
+  22% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.55);
+  }
+}
+
+@keyframes spellCircleReveal {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.42) rotate(-15deg);
+  }
+  24%,
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.16) rotate(18deg);
+  }
+}
+
+@keyframes circleSpin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes resetFlash {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateX(-20%) skewX(-12deg);
+  }
+  38% {
+    opacity: 0.82;
+  }
+  62% {
+    opacity: 0.48;
+    transform: translateX(18%) skewX(-12deg);
+  }
+}
+
+@keyframes sparkleBurst {
+  0% {
+    opacity: 0;
+    filter: blur(0);
+    transform: translate(-50%, -50%) scale(0.2) rotate(0deg);
+  }
+  22% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.35) rotate(38deg);
+  }
+  68% {
+    opacity: 0.88;
+    transform: translate(calc(-50% + var(--drift-x)), calc(-50% + var(--drift-y))) scale(0.72) rotate(96deg);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(1.4px);
+    transform: translate(calc(-50% + var(--drift-x)), calc(-50% + var(--drift-y))) scale(0.18) rotate(155deg);
+  }
+}
+
+@keyframes dustVeil {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(0.7rem);
+  }
+  26%,
+  74% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.04) translateY(-1.3rem);
+  }
+}
+
+@keyframes dustWash {
+  0% {
+    opacity: 0;
+    transform: translateX(-14%) skewX(-8deg);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(18%) skewX(-8deg);
+  }
+}
+
+@keyframes pageCleanse {
+  0% {
+    filter: brightness(1) saturate(1);
+  }
+  48% {
+    filter: brightness(1.22) saturate(0.74);
+  }
+  100% {
+    filter: brightness(1.04) saturate(0.92);
+  }
+}
+
+@keyframes leftPageSeal {
+  0% {
+    opacity: 1;
+    transform: rotateY(0deg) translateX(0);
+  }
+  100% {
+    opacity: 0.72;
+    transform: rotateY(-72deg) translateX(5%);
+  }
+}
+
+@keyframes rightPageSeal {
+  0% {
+    opacity: 1;
+    transform: rotateY(0deg) translateX(0);
+  }
+  100% {
+    opacity: 0.72;
+    transform: rotateY(72deg) translateX(-5%);
+  }
+}
+
+@keyframes leftPageReopen {
+  0% {
+    opacity: 0.72;
+    transform: rotateY(-72deg) translateX(5%);
+  }
+  72% {
+    opacity: 1;
+    transform: rotateY(4deg) translateX(0);
+  }
+  100% {
+    opacity: 1;
+    transform: rotateY(0deg) translateX(0);
+  }
+}
+
+@keyframes rightPageReopen {
+  0% {
+    opacity: 0.72;
+    transform: rotateY(72deg) translateX(-5%);
+  }
+  72% {
+    opacity: 1;
+    transform: rotateY(-4deg) translateX(0);
+  }
+  100% {
+    opacity: 1;
+    transform: rotateY(0deg) translateX(0);
   }
 }
 

@@ -43,7 +43,7 @@ This project should feel like a cursed object, not a chatbot. The first mileston
 
 - Store conversation history in `localStorage`.
 - Send recent history to the server with every new inscription.
-- Reset button clears all saved memory.
+- Reset button clears all saved memory through a wand, sparkle, and diary-reopening ritual.
 - Keep memory subtle and atmospheric, not like a chat transcript.
 
 ## Module 7 - Cursed Reply Rendering
