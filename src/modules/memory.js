@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'living-ink-diary-memory-v1';
+const SEAL_KEY = 'living-ink-diary-seal-v1';
 const MAX_ENTRIES = 20;
 
 export function readMemory() {
@@ -16,6 +17,7 @@ export function writeMemory(entries) {
 
 export function clearMemory() {
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(SEAL_KEY);
 }
 
 export function makeMemoryEntry(role, text, extras = {}) {
@@ -25,6 +27,16 @@ export function makeMemoryEntry(role, text, extras = {}) {
     createdAt: new Date().toISOString(),
     ...extras
   };
+}
+
+export function readSeal() {
+  return localStorage.getItem(SEAL_KEY) || '';
+}
+
+export function writeSeal(dataUrl) {
+  if (typeof dataUrl === 'string' && dataUrl.startsWith('data:image/')) {
+    localStorage.setItem(SEAL_KEY, dataUrl);
+  }
 }
 
 function isMemoryEntry(entry) {

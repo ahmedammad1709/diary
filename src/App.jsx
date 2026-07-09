@@ -2,7 +2,23 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import InkCanvas from './components/InkCanvas.jsx';
 import { useTypewriter } from './hooks/useTypewriter.js';
 import { askDiary } from './modules/diaryApi.js';
-import { clearMemory, makeMemoryEntry, readMemory, writeMemory } from './modules/memory.js';
+import {
+  clearMemory,
+  makeMemoryEntry,
+  readMemory,
+  readSeal,
+  writeMemory,
+  writeSeal
+} from './modules/memory.js';
+import {
+  corruptMemoryText,
+  findSecretTrigger,
+  getDailyPrompt,
+  getDiaryBond,
+  getMemoryFragments
+} from './modules/diarySystems.js';
+import { shareOmenCard } from './modules/shareCard.js';
+import { playDiarySound, setAmbientSound, stopAmbient } from './modules/soundEngine.js';
 import wandUrl from '../wand.png';
 
 const READING_LINES = [
@@ -63,6 +79,11 @@ function App() {
   const [isSinking, setIsSinking] = useState(false);
   const [isAsking, setIsAsking] = useState(false);
   const [resetPhase, setResetPhase] = useState('idle');
+  const [hasInk, setHasInk] = useState(false);
+  const [sealPreview, setSealPreview] = useState(() => readSeal());
+  const [secretPulse, setSecretPulse] = useState(null);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [mood, setMood] = useState(() => latestDiaryEntry(readMemory())?.mood || 'ominous');
   const [effect, setEffect] = useState(() => latestDiaryEntry(readMemory())?.effect || 'mist');
   const [diaryReply, setDiaryReply] = useState(() => latestDiaryEntry(readMemory())?.text || '');
@@ -71,16 +92,27 @@ function App() {
 
   const typedReply = useTypewriter(diaryReply, effect === 'whisper' ? 54 : 34);
   const memoryEchoes = useMemo(() => memory.slice(-6).reverse(), [memory]);
+  const memoryFragments = useMemo(() => getMemoryFragments(memory), [memory]);
+  const diaryBond = useMemo(() => getDiaryBond(memory), [memory]);
+  const pendingSecret = useMemo(() => findSecretTrigger(message), [message]);
   const isResetting = resetPhase !== 'idle';
-  const canSubmit = message.trim().length > 0 && !isAsking && !isResetting;
+  const canSubmit = (message.trim().length > 0 || hasInk) && !isAsking && !isResetting;
 
   useEffect(() => {
     return () => {
       resetTimersRef.current.forEach(window.clearTimeout);
+      stopAmbient();
     };
   }, []);
 
+  const playSound = (type) => {
+    if (soundEnabled) {
+      playDiarySound(type);
+    }
+  };
+
   const openDiary = () => {
+    playSound('open');
     setIsOpening(true);
     window.setTimeout(() => {
       setIsOpen(true);
@@ -89,19 +121,49 @@ function App() {
 
   const submitInscription = async () => {
     const inscription = message.trim();
-    if (!inscription || isAsking || isResetting) {
+    const drawingImage = canvasRef.current?.exportImage();
+    const hasDrawing = Boolean(drawingImage);
+
+    if ((!inscription && !hasDrawing) || isAsking || isResetting) {
       return;
+    }
+
+    const secret = findSecretTrigger(inscription);
+    if (secret) {
+      setSecretPulse(secret.key);
+      setMood(secret.mood);
+      setEffect(secret.effect);
+      setStatusLine(secret.status);
+      playSound('spark');
+      window.setTimeout(() => setSecretPulse(null), 2400);
     }
 
     setIsAsking(true);
     setIsSinking(true);
-    setStatusLine(READING_LINES[Math.floor(Math.random() * READING_LINES.length)]);
+    setStatusLine(secret?.status || READING_LINES[Math.floor(Math.random() * READING_LINES.length)]);
+    playSound('sink');
 
-    const userEntry = makeMemoryEntry('user', inscription);
+    const userEntry = makeMemoryEntry(
+      'user',
+      inscription || 'A hand-drawn mark was offered to the diary.',
+      {
+        hasDrawing,
+        secret: secret?.key || null
+      }
+    );
 
     try {
-      await wait(900);
-      const response = await askDiary({ message: inscription, history: memory });
+      await wait(secret ? 1150 : 900);
+      const response = await askDiary({
+        message: inscription,
+        history: memory,
+        drawingImage: drawingImage
+          ? {
+              mimeType: drawingImage.mimeType,
+              data: drawingImage.data
+            }
+          : null
+      });
       const diaryEntry = makeMemoryEntry('diary', response.reply, {
         mood: response.mood,
         effect: response.effect
@@ -114,8 +176,14 @@ function App() {
       setEffect(response.effect);
       setDiaryReply(response.reply);
       setMessage('');
+      setHasInk(false);
+      if (drawingImage) {
+        setSealPreview(drawingImage.dataUrl);
+        writeSeal(drawingImage.dataUrl);
+      }
       canvasRef.current?.clear();
-      setStatusLine('The page exhales.');
+      setStatusLine(response.fallback ? 'The diary answered from its own buried ink.' : 'The page exhales.');
+      playSound('reply');
     } catch (error) {
       setMood('angry');
       setEffect('scratch');
@@ -123,6 +191,80 @@ function App() {
     } finally {
       setIsSinking(false);
       setIsAsking(false);
+    }
+  };
+
+  const openDailyPage = async () => {
+    if (isAsking || isResetting) {
+      return;
+    }
+
+    setIsAsking(true);
+    setIsSinking(false);
+    setMood('curious');
+    setEffect('mist');
+    setStatusLine('The diary turns to today without your hand.');
+    playSound('open');
+
+    const dailyPrompt = getDailyPrompt(memory);
+    const userEntry = makeMemoryEntry('user', 'The daily page was opened.', {
+      daily: true
+    });
+
+    try {
+      await wait(650);
+      const response = await askDiary({ message: dailyPrompt, history: memory });
+      const diaryEntry = makeMemoryEntry('diary', response.reply, {
+        mood: response.mood,
+        effect: response.effect,
+        daily: true
+      });
+      const nextMemory = [...memory, userEntry, diaryEntry].slice(-20);
+
+      setMemory(nextMemory);
+      writeMemory(nextMemory);
+      setMood(response.mood);
+      setEffect(response.effect);
+      setDiaryReply(response.reply);
+      setStatusLine(response.fallback ? 'The diary answered from its own buried ink.' : 'The daily omen has been written.');
+      playSound('reply');
+    } catch (error) {
+      setMood('angry');
+      setEffect('scratch');
+      setStatusLine(error.message);
+    } finally {
+      setIsAsking(false);
+    }
+  };
+
+  const toggleSound = async () => {
+    const nextValue = !soundEnabled;
+    await setAmbientSound(nextValue);
+    setSoundEnabled(nextValue);
+    setStatusLine(nextValue ? 'A low room-tone wakes beneath the page.' : 'The room falls silent again.');
+    if (nextValue) {
+      playDiarySound('spark');
+    }
+  };
+
+  const shareLatestOmen = async () => {
+    if (!diaryReply || isSharing) {
+      return;
+    }
+
+    setIsSharing(true);
+    try {
+      const message = await shareOmenCard({
+        reply: diaryReply,
+        mood,
+        effect,
+        sealPreview
+      });
+      setStatusLine(message);
+    } catch (error) {
+      setStatusLine(error.message);
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -138,6 +280,7 @@ function App() {
     setMood('calm');
     setEffect('glow');
     setStatusLine('The wand rises from below the page.');
+    playSound('spark');
 
     scheduleReset(() => {
       setStatusLine('Its tip begins to draw a circle in the air.');
@@ -149,6 +292,8 @@ function App() {
       setMemory([]);
       setMessage('');
       setDiaryReply('');
+      setHasInk(false);
+      setSealPreview('');
       canvasRef.current?.clear();
       setStatusLine('Silver dust unthreads the old ink.');
     }, 1520);
@@ -177,7 +322,7 @@ function App() {
   };
 
   return (
-    <main className={`app-shell mood-${mood} effect-${effect}`}>
+    <main className={`app-shell mood-${mood} effect-${effect} ${secretPulse ? `secret-${secretPulse}` : ''}`}>
       {!isOpen ? (
         <section className={`cover-scene ${isOpening ? 'is-opening' : ''}`} aria-label="Closed diary">
           <div className="closed-diary" role="img" aria-label="A closed dark diary">
@@ -199,10 +344,23 @@ function App() {
           aria-label="Open living diary"
         >
           <div className="top-rail">
-            <p className="brand-mark">The Living Ink Diary</p>
-            <button className="memory-reset" type="button" onClick={resetDiary} disabled={isAsking || isResetting}>
-              {isResetting ? 'Memory unbinding...' : 'Reset Diary Memory'}
-            </button>
+            <div>
+              <p className="brand-mark">The Living Ink Diary</p>
+              <p className="bond-caption">
+                Bond: <span>{diaryBond.label}</span>
+              </p>
+            </div>
+            <div className="rail-actions">
+              <button className="daily-button" type="button" onClick={openDailyPage} disabled={isAsking || isResetting}>
+                Daily Page
+              </button>
+              <button className="sound-button" type="button" onClick={toggleSound}>
+                {soundEnabled ? 'Sound On' : 'Sound Off'}
+              </button>
+              <button className="memory-reset" type="button" onClick={resetDiary} disabled={isAsking || isResetting}>
+                {isResetting ? 'Memory unbinding...' : 'Reset Diary Memory'}
+              </button>
+            </div>
           </div>
 
           <div className={`diary-book reset-${resetPhase}`}>
@@ -212,14 +370,30 @@ function App() {
                 <strong>{Math.ceil(memory.length / 2)} echoes</strong>
               </div>
 
+              <div className="bond-panel">
+                <div className="bond-panel-copy">
+                  <span>diary bond</span>
+                  <strong>{diaryBond.label}</strong>
+                  <p>{diaryBond.description}</p>
+                </div>
+                <div className="bond-orb" style={{ '--bond': `${diaryBond.pulse}%` }} />
+              </div>
+
+              {sealPreview && (
+                <div className="seal-preview">
+                  <span>last mark</span>
+                  <img src={sealPreview} alt="Last hand-drawn diary mark" />
+                </div>
+              )}
+
               <div className="memory-list">
                 {memoryEchoes.length === 0 ? (
                   <p className="empty-memory">No old words remain. The page waits with clean teeth.</p>
                 ) : (
-                  memoryEchoes.map((entry) => (
+                  memoryEchoes.map((entry, index) => (
                     <p className={`memory-line memory-${entry.role}`} key={`${entry.createdAt}-${entry.text}`}>
                       <span>{entry.role === 'diary' ? 'Diary' : 'You'}</span>
-                      {entry.text}
+                      {entry.role === 'user' ? corruptMemoryText(entry.text, index) : entry.text}
                     </p>
                   ))
                 )}
@@ -257,6 +431,20 @@ function App() {
               </div>
 
               <div className={`writing-surface ${mode === 'draw' ? 'drawing-mode' : ''}`}>
+                {memoryFragments.map((fragment) => (
+                  <span
+                    className="page-fragment"
+                    key={fragment.id}
+                    style={{
+                      '--x': `${fragment.x}%`,
+                      '--y': `${fragment.y}%`,
+                      '--rotate': `${fragment.rotate}deg`,
+                      '--delay': fragment.delay
+                    }}
+                  >
+                    {fragment.text}
+                  </span>
+                ))}
                 <textarea
                   className={`ink-input ${isSinking ? 'is-sinking' : ''}`}
                   placeholder="Write what you should not have written..."
@@ -268,19 +456,33 @@ function App() {
                   ref={canvasRef}
                   drawingEnabled={mode === 'draw' && !isAsking && !isResetting}
                   sinking={isSinking}
+                  onInkChange={setHasInk}
                 />
+                <div className={`secret-veil ${pendingSecret ? 'is-awake' : ''}`}>
+                  {pendingSecret ? pendingSecret.status : ''}
+                </div>
               </div>
 
               <div className={`reply-field ${diaryReply ? 'has-reply' : ''}`}>
                 <p className="reply-text">{typedReply}</p>
+                {diaryReply && (
+                  <button className="share-button" type="button" onClick={shareLatestOmen} disabled={isSharing}>
+                    {isSharing ? 'Sealing...' : 'Share omen'}
+                  </button>
+                )}
               </div>
 
               <div className="ritual-row">
                 <p className="status-line" aria-live="polite">
-                  {statusLine || (mode === 'draw' ? 'The ink follows your hand.' : 'The page waits.')}
+                  {statusLine ||
+                    (hasInk
+                      ? 'A mark has been made. The diary can read it.'
+                      : mode === 'draw'
+                        ? 'The ink follows your hand.'
+                        : 'The page waits.')}
                 </p>
                 <button className="sink-button" type="button" onClick={submitInscription} disabled={!canSubmit}>
-                  {isAsking ? 'The ink is sinking...' : 'Let the ink sink'}
+                  {isAsking ? 'The ink is sinking...' : hasInk && !message.trim() ? 'Let the mark sink' : 'Let the ink sink'}
                 </button>
               </div>
             </section>

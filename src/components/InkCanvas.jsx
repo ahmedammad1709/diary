@@ -1,9 +1,12 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 
-const InkCanvas = forwardRef(function InkCanvas({ drawingEnabled, sinking }, ref) {
+const EXPORT_WIDTH = 900;
+
+const InkCanvas = forwardRef(function InkCanvas({ drawingEnabled, sinking, onInkChange }, ref) {
   const canvasRef = useRef(null);
   const drawingRef = useRef(false);
   const lastPointRef = useRef(null);
+  const hasInkRef = useRef(false);
 
   useImperativeHandle(ref, () => ({
     clear() {
@@ -13,6 +16,39 @@ const InkCanvas = forwardRef(function InkCanvas({ drawingEnabled, sinking }, ref
       }
       const context = canvas.getContext('2d');
       context.clearRect(0, 0, canvas.width, canvas.height);
+      hasInkRef.current = false;
+      onInkChange?.(false);
+    },
+    hasInk() {
+      return hasInkRef.current;
+    },
+    exportImage() {
+      const canvas = canvasRef.current;
+      if (!canvas || !hasInkRef.current) {
+        return null;
+      }
+
+      const width = EXPORT_WIDTH;
+      const height = Math.max(1, Math.round((canvas.height / canvas.width) * width));
+      const output = document.createElement('canvas');
+      output.width = width;
+      output.height = height;
+
+      const context = output.getContext('2d');
+      const parchment = context.createLinearGradient(0, 0, width, height);
+      parchment.addColorStop(0, '#ead399');
+      parchment.addColorStop(0.55, '#f4dfaa');
+      parchment.addColorStop(1, '#c89c62');
+      context.fillStyle = parchment;
+      context.fillRect(0, 0, width, height);
+      context.drawImage(canvas, 0, 0, width, height);
+
+      const dataUrl = output.toDataURL('image/png');
+      return {
+        dataUrl,
+        mimeType: 'image/png',
+        data: dataUrl.split(',')[1]
+      };
     }
   }));
 
@@ -73,7 +109,31 @@ const InkCanvas = forwardRef(function InkCanvas({ drawingEnabled, sinking }, ref
     context.moveTo(previous.x, previous.y);
     context.quadraticCurveTo(previous.x, previous.y, point.x, point.y);
     context.stroke();
+    markInk();
     lastPointRef.current = point;
+  };
+
+  const drawDot = (point) => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    const context = canvas.getContext('2d');
+    context.fillStyle = 'rgba(24, 7, 4, 0.86)';
+    context.shadowColor = 'rgba(38, 0, 0, 0.26)';
+    context.shadowBlur = 4;
+    context.beginPath();
+    context.arc(point.x, point.y, 2.6 + point.pressure * 2.4, 0, Math.PI * 2);
+    context.fill();
+    markInk();
+  };
+
+  const markInk = () => {
+    if (!hasInkRef.current) {
+      hasInkRef.current = true;
+      onInkChange?.(true);
+    }
   };
 
   const handlePointerDown = (event) => {
@@ -84,6 +144,7 @@ const InkCanvas = forwardRef(function InkCanvas({ drawingEnabled, sinking }, ref
     event.currentTarget.setPointerCapture(event.pointerId);
     drawingRef.current = true;
     lastPointRef.current = getPoint(event);
+    drawDot(lastPointRef.current);
   };
 
   const handlePointerMove = (event) => {
